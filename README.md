@@ -1,4 +1,85 @@
-# QQQ Short-Term Call Selection and Risk Analysis
+# Options Research — Call Selection & Risk Analysis
+
+[Open the options dashboard →](https://landerosr.github.io/qqq-options-risk-analysis/)
+
+An interactive extension of my QQQ research: enter a ticker, price target and
+time horizon, then compare the cost, modeled outcome and downside risk of call
+contracts. The original fixed-scenario Python study is preserved separately.
+
+## Using the dashboard
+
+1. Start with the clearly labeled synthetic QQQ example, or enter your own ticker
+   and underlying price. Changing a ticker **does not fetch market data**.
+2. Set the target, horizon in **calendar days**, and one-contract budget.
+3. Enter bid, ask, strike, expiry and implied volatility for standard 100-share
+   calls, or import a CSV using the on-page template. Use a consistent UTC snapshot.
+4. Run 20,000 or 100,000 Monte Carlo paths. Compare target-touch probability,
+   target P&L, horizon profit probability, expiry breakeven, Delta and Theta.
+5. Select a contract for VaR, CVaR and a price/volatility stress table.
+
+**Data boundary:** there is no automatic Yahoo feed or broker connection. The
+Yahoo link opens the selected ticker's chain as a reference. Enter/import quotes
+you are permitted to use. All input stays in the browser, with no account or
+upload server. Entered data is not independently verified and is not retained
+when the page reloads. Snapshot age and wide spreads are flagged for review.
+
+## Model choices
+
+- Black–Scholes–Merton reprices calls at the horizon, using each contract's IV and
+  an optional exit-IV change. It is a **European-exercise approximation**, not an
+  American early-exercise model. Continuous dividend yield is not a discrete
+  dividend schedule.
+- A common geometric Brownian motion drives all contracts, using the user's
+  underlying volatility and expected **price return**. Expected return defaults
+  to 0%; the target does not calibrate or imply a return forecast. The risk-free
+  rate is used for pricing, not presented as a real-world return forecast.
+- 365-day year fractions include overnight and weekend time. Snapshot and expiry
+  are explicit UTC timestamps; the tool does not infer exchange calendars or
+  expiration times. This differs from the original study's 252-trading-day clock.
+- Stock paths use seed 42. An independent Brownian-bridge stream (seed 314159)
+  models between-step target crossings. The displayed paths are 16 samples,
+  not confidence bands. The target-touch sampling margin excludes model error.
+- P&L assumes buying at the entered ask and selling at a theoretical horizon
+  value, minus entered total fees. There is no stop-loss or exit-at-first-touch
+  rule. Exit spreads, slippage, financing and exercise/assignment cash needs are
+  not modeled. Expiry probability uses the lognormal terminal distribution.
+- Reward/risk = target-scenario net profit / (100 × ask + entered fees).
+  VaR is the nearest-rank 95th percentile of loss; CVaR averages the worst 5%.
+  Both are floored at zero. Neither replaces the maximum-loss calculation.
+- The tool rejects contracts expiring before the horizon, crossed quotes,
+  inconsistent CSV snapshots, duplicate contracts and unsupported values.
+  Adjusted contracts, puts, multi-leg trades and live execution are out of scope.
+
+No performance claim or recommendation follows from a favorable modeled result.
+The dashboard is a scenario-comparison tool, not a validated trading strategy.
+
+## Build and checks
+
+The dashboard is dependency-free HTML, CSS and JavaScript. Simulation runs in a
+Web Worker so editing remains responsive. Python/NumPy power the retained study.
+
+```sh
+node build-dashboard.mjs
+node --test test_dashboard.mjs
+python3 -m pip install -r requirements.txt
+python3 -m unittest -v test_qqq_options.py
+python3 -m http.server 3000 --directory docs
+```
+
+Dashboard tests cover pricing benchmarks, numerical Greeks, deterministic cases,
+GBM moments, continuous-barrier probabilities, Monte Carlo pricing, risk bounds,
+CSV validation and build consistency. Serve over HTTP; opening the HTML directly
+as a local file can prevent the module worker from loading.
+
+Source: `web/`. Published output: `docs/`. Original report: `docs/report.html`.
+Running the Python report generator updates `report.html`, not the dashboard.
+
+References: [Options Industry Council: Black–Scholes](https://www.optionseducation.org/advancedconcepts/black-scholes-formula)
+and [Yahoo Finance data disclosures](https://help.yahoo.com/kb/finance/article-exchanges-data-delays-sln2310.html).
+
+---
+
+## Original QQQ study
 
 This Python project evaluates a practical options question:
 
@@ -44,13 +125,13 @@ strategy is profitable.
 
 ## Visual report
 
-[View the interactive project report](https://landerosr.github.io/qqq-options-risk-analysis/)
+[View the original project report](https://landerosr.github.io/qqq-options-risk-analysis/report.html)
 
 ## Project files
 
 - `qqq_options_analysis.py`: pricing, simulation, risk, and report generation
 - `BLACK_SCHOLES_ASSUMPTIONS.md`: assumptions and model limitations
-- `docs/index.html`: GitHub Pages version of the visual report
+- `docs/report.html`: GitHub Pages version of the original visual report
 - `results/*.csv`: summary model outputs
 - `test_qqq_options.py`: five automated validation checks
 

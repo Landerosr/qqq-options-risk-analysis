@@ -591,7 +591,7 @@ svg {{ width:100%; height:auto; }} .note {{ font-size:12px; color:#52606d; line-
     for output_directory in (RESULTS, DOCS, DIST):
         output_directory.mkdir(parents=True, exist_ok=True)
     (RESULTS / "report.html").write_text(html, encoding="utf-8")
-    (DOCS / "index.html").write_text(html, encoding="utf-8")
+    (DOCS / "report.html").write_text(html, encoding="utf-8")
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
 
