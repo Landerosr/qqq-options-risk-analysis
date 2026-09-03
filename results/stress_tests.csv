@@ -1,0 +1,5 @@
+Scenario,QQQ Price After 1 Day,Volatility,Repriced Call,Position P&L
+Decline with volatility increase,700.0,0.3,6.886898078623915,-187.68428703678524
+No price change,706.0,0.25,7.670057675342832,-109.3683273648935
+Target reached,709.0,0.25,9.132561688510464,36.88207395186964
+Target exceeded with volatility decline,712.0,0.2,8.997026995970998,23.328604697923083
