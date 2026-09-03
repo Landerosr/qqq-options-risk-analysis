@@ -546,7 +546,7 @@ svg {{ width:100%; height:auto; }} .note {{ font-size:12px; color:#52606d; line-
 @media(max-width:760px) {{ .cards {{ grid-template-columns:repeat(2,1fr); }} }}
 </style></head><body><main>
 <h1>QQQ Short-Term Call Selection and Risk Analysis</h1>
-<p class="subtitle">An internship-level Python project evaluating the tradeoff between low option cost, target-price probability, time decay, and downside risk for standard QQQ calls. The starting case—QQQ near $706 with a $709 target—was supplied from independent trading experience.</p>
+<p class="subtitle">A Python analysis of QQQ call-option selection, comparing option cost, target-price probability, time decay, and downside risk. The starting case—QQQ near $706 with a $709 target—reflects independent trading experience.</p>
 <div class="cards">
   <div class="card">QQQ Entry Case<strong>${CASE.spot:.2f}</strong></div>
   <div class="card">QQQ Target<strong>${CASE.target:.2f} ({target_change:.2%})</strong></div>
