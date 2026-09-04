@@ -208,6 +208,24 @@ export function sampleRows(p) {
     };
   });
 }
+// Validate calendar components before Date.parse can normalize an invalid date.
+function csvTime(value, field, row) {
+  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)(?::(\d\d)(?:\.(\d+))?)?Z$/.exec(value);
+  const fail = () => { throw Error(`CSV row ${row}: ${field} must be a valid ISO UTC date and time.`); };
+  if (!match) return fail();
+  const [, year, month, day, hour, minute, second = "0"] = match.map((v, i) => i > 0 && i < 7 && v !== undefined ? Number(v) : v);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > days[month - 1] || hour > 23 || minute > 59 || second > 59) return fail();
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return fail();
+  return time;
+}
+function csvNumber(value, field, row) {
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) || !Number.isFinite(Number(value)))
+    throw Error(`CSV row ${row}: ${field} must be a finite decimal number.`);
+  return Number(value);
+}
 export function parseCSV(text) {
   if (text.length > 100000) throw Error("CSV is too large (100 KB maximum).");
   // Quote-aware CSV state machine, including CRLF and escaped quotes.
@@ -248,27 +266,27 @@ export function parseCSV(text) {
     if (r.length !== header.length) throw Error(`CSV row ${i + 2} has the wrong number of fields.`);
     const d = Object.fromEntries(header.map((k, j) => [k, r[j]]));
     if (required.some((k) => !d[k])) throw Error(`CSV row ${i + 2} has a missing value.`);
-    if (
-      !/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?Z$/.test(d.quote_time) ||
-      !/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?Z$/.test(d.expiry)
-    )
-      throw Error("Use ISO UTC times, for example 2026-09-03T14:00:00Z.");
+    const quoteTime = csvTime(d.quote_time, "quote_time", i + 2);
+    const expiry = csvTime(d.expiry, "expiry", i + 2);
+    const numbers = Object.fromEntries(["spot", "strike", "bid", "ask", "iv_pct"].map(
+      (field) => [field, csvNumber(d[field], field, i + 2)],
+    ));
     if (i === 0) {
       symbol = d.symbol.toUpperCase();
-      spot = Number(d.spot);
-      asof = Date.parse(d.quote_time);
+      spot = numbers.spot;
+      asof = quoteTime;
     } else if (
       symbol !== d.symbol.toUpperCase() ||
-      spot !== Number(d.spot) ||
-      asof !== Date.parse(d.quote_time)
+      spot !== numbers.spot ||
+      asof !== quoteTime
     )
       throw Error("All rows must use the same ticker, spot and quote_time.");
     return {
-      strike: Number(d.strike),
-      expiry: Date.parse(d.expiry),
-      bid: Number(d.bid),
-      ask: Number(d.ask),
-      iv: Number(d.iv_pct) / 100,
+      strike: numbers.strike,
+      expiry,
+      bid: numbers.bid,
+      ask: numbers.ask,
+      iv: numbers.iv_pct / 100,
     };
   });
   return { symbol, spot, asof, rows };

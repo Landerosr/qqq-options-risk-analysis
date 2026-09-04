@@ -157,6 +157,58 @@ test("CSV rejects inconsistent, missing, oversized or malformed rows", () => {
   assert.throws(() => parseCSV(csv.replace("14:00:00Z", "14:00:00")));
   assert.throws(() => parseCSV(csv + '"'));
 });
+test("CSV rejects impossible calendar dates instead of rolling them forward", () => {
+  for (const field of ["quote_time", "expiry"]) {
+    const index = field === "quote_time" ? 2 : 3;
+    for (const invalid of [
+      "2026-02-30T14:00:00Z",
+      "2025-02-29T14:00:00Z",
+      "2100-02-29T14:00:00Z",
+      "2026-04-31T14:00:00Z",
+      "2026-13-01T14:00:00Z",
+      "2026-09-03T24:00:00Z",
+      "2026-09-03T14:60:00Z",
+      "2026-09-03T14:00:60Z",
+    ]) {
+      const values = csv.split("\n")[1].split(",");
+      values[index] = invalid;
+      assert.throws(
+        () => parseCSV(csv.split("\n")[0] + "\n" + values.join(",")),
+        new RegExp(`CSV row 2: ${field}`),
+        invalid,
+      );
+    }
+  }
+});
+test("CSV preserves leap days, optional seconds and fractional UTC timestamps", () => {
+  const input = csv
+    .replace("2026-09-03T14:00:00Z", "2024-02-29T14:00Z")
+    .replace("2026-09-08T14:00:00Z", "2024-03-01T14:00:00.125Z");
+  const data = parseCSV(input);
+  assert.equal(new Date(data.asof).toISOString(), "2024-02-29T14:00:00.000Z");
+  assert.equal(new Date(data.rows[0].expiry).toISOString(), "2024-03-01T14:00:00.125Z");
+  const equivalent = input + "\nQQQ,7.06e2,2024-02-29T14:00:00.000Z,2024-03-02T14:00Z,710,5,5.2,25";
+  assert.equal(parseCSV(equivalent).rows.length, 2);
+});
+test("CSV numeric fields reject non-decimal and non-finite values with row context", () => {
+  const fields = ["symbol", "spot", "quote_time", "expiry", "strike", "bid", "ask", "iv_pct"];
+  for (const field of ["spot", "strike", "bid", "ask", "iv_pct"])
+    for (const invalid of ["0x10", "0b10", "0o10", "Infinity", "NaN", "1e309", "25%"] ) {
+      const values = csv.split("\n")[1].split(",");
+      values[fields.indexOf(field)] = invalid;
+      assert.throws(
+        () => parseCSV(csv + "\n" + values.join(",")),
+        new RegExp(`CSV row 3: ${field}`),
+      );
+    }
+});
+test("CSV accepts ordinary decimal and scientific notation without changing units", () => {
+  const data = parseCSV(csv.replace(",706,", ",7.06e2,").replace(",5,5.2,25", ",0,+5.2,2.5e1"));
+  assert.equal(data.spot, 706);
+  assert.equal(data.rows[0].bid, 0);
+  assert.equal(data.rows[0].ask, 5.2);
+  assert.equal(data.rows[0].iv, 0.25);
+});
 test("build preserves report and publishes exact tested modules", async () => {
   for (const name of ["index.html", "app.mjs", "model.mjs", "worker.mjs", "style.css"])
     assert.equal(await readFile("web/" + name, "utf8"), await readFile("docs/" + name, "utf8"));

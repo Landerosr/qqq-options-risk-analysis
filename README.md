@@ -48,6 +48,9 @@ when the page reloads. Snapshot age and wide spreads are flagged for review.
   Both are floored at zero. Neither replaces the maximum-loss calculation.
 - The tool rejects contracts expiring before the horizon, crossed quotes,
   inconsistent CSV snapshots, duplicate contracts and unsupported values.
+  CSV timestamps are checked against the calendar (including leap years), so
+  invalid dates cannot silently roll into another month. Numeric fields accept
+  finite decimal/scientific notation; errors identify the row and field.
   Adjusted contracts, puts, multi-leg trades and live execution are out of scope.
 
 No performance claim or recommendation follows from a favorable modeled result.
