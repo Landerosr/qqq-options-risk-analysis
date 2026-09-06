@@ -165,6 +165,9 @@ export function analyze(p, rows) {
       pop: losses.filter((l) => l < 0).length / losses.length,
       breakeven: threshold,
       expiryPop,
+      worthlessProbability: p.vol > 0
+        ? cdf((Math.log(c.strike / p.spot) - (p.mu - 0.5 * p.vol * p.vol) * t) / (p.vol * Math.sqrt(t)))
+        : +(p.spot * Math.exp(p.mu * t) <= c.strike),
       delta: g.delta,
       theta: g.theta === null ? null : g.theta * 100,
       var95: Math.max(0, losses[Math.ceil(0.95 * losses.length) - 1]),

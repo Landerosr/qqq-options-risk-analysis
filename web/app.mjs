@@ -128,6 +128,9 @@ function node(tag, text, cls) {
 function select(id) {
   if (!result) return;
   const c = result.contracts.find((x) => x.id === id);
+  $("beginner-contract").value = String(id);
+  $("worthless").textContent = pct(c.worthlessProbability);
+  $("worthless-explanation").textContent = `Selected $${c.strike} call · stock at or below $${c.strike} on ${dt(c.expiry).slice(0, 10)} (UTC). You lose the premium and fees if held to expiration with no payoff.`;
   document
     .querySelectorAll(".comparison tr")
     .forEach((tr) => tr.classList.toggle("selected", Number(tr.dataset.id) === id));
@@ -204,7 +207,14 @@ function chart(r) {
 function render(r) {
   result = r;
   $("results").hidden = false;
+  $("beginner-contract").replaceChildren(...r.contracts.map(c => {
+    const option = node("option", `$${c.strike} call · expires ${dt(c.expiry).slice(0, 10)}`);
+    option.value = c.id;
+    return option;
+  }));
+  $("beginner-contract").onchange = e => select(Number(e.target.value));
   $("touch").textContent = pct(r.touch);
+  $("touch-explanation").textContent = `About ${Math.round(r.touch * 100)} out of 100 modeled paths reach ${money(r.p.target)} within ${r.p.horizon} calendar days.`;
   $("finish").textContent = pct(r.finish);
   $("affordable").textContent =
     `${r.contracts.filter((c) => c.cost <= r.p.budget).length} / ${r.contracts.length}`;
@@ -387,3 +397,31 @@ $("template").onclick = () => {
 $("asof").value = dt(Math.floor(Date.now() / 1000) * 1000);
 reset();
 run();
+
+const lessons = [
+  ["What is a call?", "A call gives its holder the right to buy shares at a set strike price. Buying the contract costs a premium."],
+  ["When is it worthless?", "At expiration, a call has no payoff if the stock is at or below its strike. Held to that point, the premium and fees are lost."],
+  ["Target hit ≠ profit", "Touching your price target is different from making money. The option price also depends on time remaining and volatility."],
+  ["Time decay", "Time passing generally reduces a bought option’s time value, with other factors unchanged. A correct direction can still produce a loss."],
+  ["Break-even at expiration", "A call needs to finish above its strike plus the premium and fees per share to make a net profit at expiration."],
+  ["Probabilities are estimates", "These numbers use your volatility and growth assumptions. They describe a model, not a prediction or a guaranteed trading outcome."],
+];
+let lessonIndex = 0;
+let lessonPaused = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function showLesson() {
+  $("lesson-title").textContent = lessons[lessonIndex][0];
+  $("lesson-text").textContent = lessons[lessonIndex][1];
+  $("lesson-count").textContent = `${lessonIndex + 1} / ${lessons.length}`;
+  $("lesson-pause").textContent = lessonPaused ? "Play" : "Pause";
+}
+function moveLesson(step) {
+  lessonIndex = (lessonIndex + step + lessons.length) % lessons.length;
+  showLesson();
+}
+$("lesson-prev").onclick = () => { lessonPaused = true; moveLesson(-1); };
+$("lesson-next").onclick = () => { lessonPaused = true; moveLesson(1); };
+$("lesson-pause").onclick = () => { lessonPaused = !lessonPaused; showLesson(); };
+setInterval(() => {
+  if (!lessonPaused && !document.hidden && !document.querySelector(".lesson:hover") && !document.querySelector(".lesson:focus-within")) moveLesson(1);
+}, 7000);
+showLesson();

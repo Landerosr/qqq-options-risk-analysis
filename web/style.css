@@ -12,6 +12,15 @@
   --muted: #626973;
   --line: #e2e5ea;
 }
+.lesson { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: #f7f9fc; }
+.lesson-top, .lesson-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+.lesson h2 { font-size: 22px; margin: 14px 0 8px; }
+.lesson > p { min-height: 3em; max-width: 850px; }
+.lesson-actions { justify-content: flex-start; margin-top: 16px; }
+.lesson-actions button { padding: 8px 14px; min-height: 40px; }
+.lesson-actions a, #lesson-count { font-size: 14px; color: var(--muted); }
+#results > .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 650px) { #results > .metrics { grid-template-columns: 1fr; } }
 * {
   box-sizing: border-box;
 }

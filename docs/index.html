@@ -22,7 +22,7 @@
       <div class="heading">
         <div>
           <p class="eyebrow">CALL SELECTION & RISK ANALYSIS</p>
-          <h1>A price target.<br />A clearer comparison.</h1>
+          <h1>Will it reach my target?<br />What could I lose?</h1>
         </div>
         <p class="intro">
           Explore what a move could mean for your options.<br />Black–Scholes pricing. Monte Carlo
@@ -32,6 +32,11 @@
       <div id="data-status" class="notice">
         SAMPLE DATA · Prices are synthetic, not live quotes.
       </div>
+      <section class="lesson" aria-label="Options basics" aria-roledescription="carousel">
+        <div class="lesson-top"><span class="eyebrow">OPTIONS, ONE IDEA AT A TIME</span><span id="lesson-count"></span></div>
+        <h2 id="lesson-title"></h2><p id="lesson-text"></p>
+        <div class="lesson-actions"><button type="button" id="lesson-prev" aria-label="Previous lesson">← Back</button><button type="button" id="lesson-pause">Pause</button><button type="button" id="lesson-next" aria-label="Next lesson">Next →</button><a href="https://www.optionseducation.org/strategies/all-strategies/long-call" target="_blank" rel="noreferrer">Learn more ↗</a></div>
+      </section>
       <form id="scenario">
         <section class="controls" aria-label="Scenario inputs">
           <label
@@ -236,11 +241,19 @@
           <h2>Your scenario</h2>
           <span id="result-label" class="muted"></span>
         </div>
+        <label>Choose your call contract <select id="beginner-contract" aria-label="Choose call for worthless probability"></select></label>
         <div class="metrics">
           <div>
-            <p>Touch your target</p>
-            <strong id="touch">—</strong><small>At any time within the horizon</small>
+            <p>Chance of hitting your price target</p>
+            <strong id="touch">—</strong><small id="touch-explanation">Estimated chance within your chosen time</small>
           </div>
+          <div>
+            <p>Chance this call expires worthless</p>
+            <strong id="worthless">—</strong><small id="worthless-explanation"></small>
+          </div>
+        </div>
+        <p class="muted">Model estimates, not guarantees. Hitting your target does not guarantee a profit. Choose a contract below to update its risk.</p>
+        <details class="settings"><summary>Other scenario numbers</summary><div class="metrics">
           <div>
             <p>Finish beyond your target</p>
             <strong id="finish">—</strong><small id="direction">At the end of the horizon</small>
@@ -249,7 +262,7 @@
             <p>Within your budget</p>
             <strong id="affordable">—</strong><small>One contract, including entered fees</small>
           </div>
-        </div>
+        </div></details>
         <div class="chart-area">
           <div>
             <h3>Possible underlying paths</h3>

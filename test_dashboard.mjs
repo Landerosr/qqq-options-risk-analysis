@@ -28,6 +28,19 @@ const p = {
 };
 const rows = sampleRows(p),
   close = (a, b, tol = 1e-6) => assert.ok(Math.abs(a - b) < tol, `${a} ≠ ${b}`);
+test("worthless probability uses strike, not premium-inclusive break-even", () => {
+  const r = analyze(p, rows);
+  for (const c of r.contracts) {
+    const t = c.days / 365;
+    close(c.worthlessProbability, cdf((Math.log(c.strike / p.spot) - (p.mu - p.vol ** 2 / 2) * t) / (p.vol * Math.sqrt(t))));
+    assert.ok(c.worthlessProbability <= 1 - c.expiryPop);
+  }
+});
+test("zero volatility handles worthless calls including exactly at strike", () => {
+  const q = { ...p, vol: 0, mu: 0 };
+  const r = analyze(q, sampleRows(q));
+  for (const c of r.contracts) assert.equal(c.worthlessProbability, +(q.spot <= c.strike));
+});
 test("BSM agrees with standard independent benchmark", () =>
   close(price(100, 100, 1, 0.2, 0.05, 0), 10.450583572185565, 1e-5));
 test("expiry value and zero-volatility discounted intrinsic", () => {
