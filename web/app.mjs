@@ -1,4 +1,4 @@
-import { sampleRows, parseCSV, validate } from "./model.mjs";
+import { sampleRows, validate } from "./model.mjs";
 const $ = (id) => document.getElementById(id),
   money = (n) =>
     new Intl.NumberFormat("en-US", {
@@ -43,7 +43,7 @@ function status() {
   $("data-status").textContent =
     mode === "sample"
       ? "SAMPLE DATA · Synthetic prices and strikes. Not live or listed contracts."
-      : `${mode === "import" ? "IMPORTED" : "MANUALLY EDITED"} QUOTES · Not independently verified. ${ageText} ${age > 0.25 ? "Review stale prices before interpreting results." : ""}`;
+      : `MANUALLY EDITED QUOTES · Not independently verified. ${ageText} ${age > 0.25 ? "Review stale prices before interpreting results." : ""}`;
   $("yahoo").href =
     `https://finance.yahoo.com/quote/${encodeURIComponent(p.symbol || "QQQ")}/options/`;
 }
@@ -294,25 +294,6 @@ function run(event) {
     $("message").textContent = e.message;
   }
 }
-function importQuotes(text) {
-  try {
-    const data = parseCSV(text),
-      p = { ...inputs(), ...data };
-    delete p.rows;
-    validate(p, data.rows);
-    $("symbol").value = data.symbol;
-    $("spot").value = data.spot;
-    $("asof").value = dt(data.asof);
-    rows = data.rows;
-    mode = "import";
-    renderRows();
-    dirty();
-    $("message").textContent =
-      "Quotes imported. Check your price target, horizon and assumptions, then run analysis.";
-  } catch (e) {
-    $("message").textContent = e.message;
-  }
-}
 $("scenario").addEventListener("submit", run);
 $("scenario").addEventListener("input", (event) => {
   const id = event.target.id;
@@ -321,7 +302,7 @@ $("scenario").addEventListener("input", (event) => {
     renderRows();
     mode = "manual";
     dirty();
-    $("message").textContent = "Ticker changed. Enter or import quotes for the new ticker.";
+    $("message").textContent = "Ticker changed. Enter quotes for the new ticker.";
     return;
   }
   if (["spot", "asof"].includes(id) && mode !== "sample") mode = "manual";
@@ -347,52 +328,6 @@ $("add").onclick = () => {
   dirty();
   $("message").textContent =
     "New row uses placeholder bid, ask and IV. Replace them with your quote.";
-};
-$("import").onclick = () => importQuotes($("csv").value);
-$("upload").onchange = async (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  if (f.size > 100000) {
-    $("message").textContent = "CSV is too large (100 KB maximum).";
-    return;
-  }
-  try {
-    importQuotes(await f.text());
-  } catch {
-    $("message").textContent = "Could not read that file. Try pasting the CSV instead.";
-  }
-  e.target.value = "";
-};
-$("template").onclick = () => {
-  const p = inputs();
-  try {
-    validate(p, rows);
-  } catch (e) {
-    $("message").textContent = e.message;
-    return;
-  }
-  const text =
-    "symbol,spot,quote_time,expiry,strike,bid,ask,iv_pct\n" +
-    rows
-      .map((c) =>
-        [
-          p.symbol,
-          p.spot,
-          new Date(p.asof).toISOString(),
-          new Date(c.expiry).toISOString(),
-          c.strike,
-          c.bid,
-          c.ask,
-          c.iv * 100,
-        ].join(","),
-      )
-      .join("\n");
-  const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
-  const a = node("a", "");
-  a.href = url;
-  a.download = mode === "sample" ? "SYNTHETIC-sample-quotes.csv" : "entered-quotes.csv";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 $("asof").value = dt(Math.floor(Date.now() / 1000) * 1000);
 reset();

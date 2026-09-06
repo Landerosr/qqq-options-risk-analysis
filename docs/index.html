@@ -206,34 +206,6 @@
             <tbody id="contracts"></tbody>
           </table>
         </div>
-        <details>
-          <summary>Import quotes from CSV</summary>
-          <p>
-            Copy quotes into this format or upload a CSV. No automatic Yahoo connection is active.
-            Imported values are not independently verified. Files stay in your browser.
-          </p>
-          <p class="muted">
-            Required columns: symbol, spot, quote_time, expiry, strike, bid, ask, iv_pct. Use ISO
-            UTC timestamps ending in Z; all rows must have the same ticker, spot and snapshot. IV is
-            a percentage: 25 means 25%.
-          </p>
-          <textarea
-            id="csv"
-            rows="5"
-            aria-label="CSV quote data"
-            spellcheck="false"
-            placeholder="symbol,spot,quote_time,expiry,strike,bid,ask,iv_pct"
-          ></textarea>
-          <div class="actions">
-            <input
-              id="upload"
-              type="file"
-              accept=".csv,text/csv"
-              aria-label="Upload quote CSV"
-            /><button id="import" class="quiet">Import CSV</button
-            ><button id="template" class="quiet">Download sample CSV</button>
-          </div>
-        </details>
       </section>
       <p id="message" role="status" aria-live="polite"></p>
       <section id="results" aria-label="Analysis results" hidden>
