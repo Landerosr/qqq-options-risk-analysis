@@ -15,7 +15,9 @@
 .lesson { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: #f7f9fc; }
 .lesson-top, .lesson-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
 .lesson h2 { font-size: 22px; margin: 14px 0 8px; }
-.lesson > p { min-height: 3em; max-width: 850px; }
+.lesson-stage { display: grid; overflow: hidden; }
+.lesson-card { grid-area: 1 / 1; min-width: 0; }
+.lesson-card p { min-height: 4.5em; max-width: 850px; margin: 0; }
 .lesson-actions { justify-content: flex-start; margin-top: 16px; }
 .lesson-actions button { padding: 8px 14px; min-height: 40px; }
 .lesson-actions a, #lesson-count { font-size: 14px; color: var(--muted); }

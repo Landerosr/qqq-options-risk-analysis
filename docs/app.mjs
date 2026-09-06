@@ -350,13 +350,28 @@ function showLesson() {
   $("lesson-pause").textContent = lessonPaused ? "Play" : "Pause";
 }
 function moveLesson(step) {
+  const stage = $("lesson-stage");
+  stage.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
+  stage.querySelectorAll("[data-outgoing]").forEach(card => card.remove());
+  const current = stage.querySelector(".lesson-card");
+  const outgoing = current.cloneNode(true);
+  outgoing.dataset.outgoing = "true";
+  outgoing.setAttribute("aria-hidden", "true");
+  outgoing.querySelectorAll("[id]").forEach(element => element.removeAttribute("id"));
   lessonIndex = (lessonIndex + step + lessons.length) % lessons.length;
   showLesson();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  stage.append(outgoing);
+  const direction = step > 0 ? 1 : -1;
+  const timing = { duration: 750, easing: "cubic-bezier(.22,.68,0,1)", fill: "both" };
+  current.animate([{ transform: `translateX(${direction * 105}%)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }], timing);
+  const exit = outgoing.animate([{ transform: "translateX(0)", opacity: 1 }, { transform: `translateX(${direction * -105}%)`, opacity: 0 }], timing);
+  exit.onfinish = () => outgoing.remove();
 }
 $("lesson-prev").onclick = () => { lessonPaused = true; moveLesson(-1); };
 $("lesson-next").onclick = () => { lessonPaused = true; moveLesson(1); };
 $("lesson-pause").onclick = () => { lessonPaused = !lessonPaused; showLesson(); };
 setInterval(() => {
-  if (!lessonPaused && !document.hidden && !document.querySelector(".lesson:hover") && !document.querySelector(".lesson:focus-within")) moveLesson(1);
+  if (!lessonPaused && !document.hidden) moveLesson(1);
 }, 7000);
 showLesson();
