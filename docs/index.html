@@ -169,6 +169,21 @@
           </p>
         </details>
       </form>
+      <section class="candles" aria-labelledby="candle-heading">
+        <div class="candle-heading-row">
+          <div><p class="eyebrow">UNDERLYING STOCK · MARKET CHART</p><h2 id="candle-heading">Price in perspective</h2></div>
+          <div class="candle-intervals" role="group" aria-label="Candlestick interval">
+            <button type="button" data-candle-interval="30" aria-pressed="false">30 min</button>
+            <button type="button" data-candle-interval="60" aria-pressed="true">1H</button>
+            <button type="button" data-candle-interval="240" aria-pressed="false">4H</button>
+          </div>
+        </div>
+        <p id="candle-status" class="muted" role="status">Loading the selected ticker’s chart…</p>
+        <div id="candle-chart"></div>
+        <div class="candle-footer"><a id="candle-link" href="https://www.tradingview.com/chart/?symbol=NASDAQ%3AQQQ&amp;interval=60" target="_blank" rel="noopener noreferrer">Open full chart ↗</a><button type="button" id="candle-reload" class="quiet">Reload chart</button></div>
+        <p class="muted">Use the ticker above: Apple = AAPL. Each candle represents 30 minutes, 1 hour or 4 hours—not the total displayed history. Chart data is provided by TradingView and may be delayed or unavailable for some symbols. If the embed is blocked, use “Open full chart.”</p>
+        <p class="muted">The chart does not supply prices to the options model. Enter the underlying price and option quotes separately. Loading this chart contacts TradingView; no option inputs are sent to it.</p>
+      </section>
       <section class="data-panel">
         <div class="section-heading">
           <h2>Contract inputs</h2>
@@ -185,8 +200,8 @@
         </div>
         <p class="muted">
           Edit a row to enter your own quotes. Use standard, unadjusted calls with a 100-share
-          multiplier. The snapshot and expiry times are UTC. Changing the ticker does not fetch
-          prices.
+          multiplier. The snapshot and expiry times are UTC. Changing the ticker updates the chart,
+          but does not fetch prices for the options model.
         </p>
         <div class="table-wrap">
           <table class="inputs">
@@ -335,7 +350,7 @@
         </div>
         <p class="muted">
           Educational research by Rodolfo Landeros. No brokerage connection, trade execution or
-          investment recommendation. No live feed. Snapshot ages and spreads need your review.
+          investment recommendation. No automatic options-data feed. Snapshot ages and spreads need your review.
           <a
             href="https://www.optionseducation.org/advancedconcepts/black-scholes-formula"
             target="_blank"

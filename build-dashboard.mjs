@@ -1,6 +1,6 @@
 import { cp, mkdir, writeFile, access } from "node:fs/promises";
 await mkdir("docs", { recursive: true });
-for (const file of ["index.html", "style.css", "app.mjs", "model.mjs", "worker.mjs"])
+for (const file of ["index.html", "style.css", "app.mjs", "model.mjs", "worker.mjs", "candles.mjs"])
   await cp(`web/${file}`, `docs/${file}`);
 await writeFile("docs/.nojekyll", "");
 await access("docs/report.html");

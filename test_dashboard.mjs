@@ -228,5 +228,5 @@ test("build preserves report and publishes exact tested modules", async () => {
   assert.match(await readFile("docs/report.html", "utf8"), /QQQ/);
   const html = await readFile("web/index.html", "utf8");
   for (const name of ["style.css", "app.mjs", "report.html"]) assert.ok(html.includes(name));
-  assert.match(html, /No live feed/);
+  assert.match(html, /No automatic options-data feed/);
 });

@@ -9,19 +9,26 @@ contracts. The original fixed-scenario Python study is preserved separately.
 ## Using the dashboard
 
 1. Start with the clearly labeled synthetic QQQ example, or enter your own ticker
-   and underlying price. Changing a ticker **does not fetch market data**.
+   and underlying price. Changing a ticker updates the TradingView candlestick chart,
+   but **does not fetch prices for the options model**.
 2. Set the target, horizon in **calendar days**, and one-contract budget.
 3. Enter bid, ask, strike, expiry and implied volatility for standard 100-share
-   calls, or import a CSV using the on-page template. Use a consistent UTC snapshot.
+   calls. Use a consistent UTC snapshot.
 4. Run 20,000 or 100,000 Monte Carlo paths. Compare target-touch probability,
    target P&L, horizon profit probability, expiry breakeven, Delta and Theta.
 5. Select a contract for VaR, CVaR and a price/volatility stress table.
 
 **Data boundary:** there is no automatic Yahoo feed or broker connection. The
-Yahoo link opens the selected ticker's chain as a reference. Enter/import quotes
-you are permitted to use. All input stays in the browser, with no account or
+Yahoo link opens the selected ticker's chain as a reference. Enter quotes
+you are permitted to use. Options inputs stay in the browser, with no account or
 upload server. Entered data is not independently verified and is not retained
 when the page reloads. Snapshot age and wide spreads are flagged for review.
+
+## Underlying candlestick chart
+
+The selected ticker drives a [TradingView Advanced Chart widget](https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/), with candlestick-only styling and 30-minute, 1-hour and 4-hour interval buttons. Apple uses ticker AAPL. The chart uses Central time; model snapshots remain UTC. It is full-width, supports the provider's chart navigation, and includes a link to open the full chart.
+
+Chart prices are external market data, not synthetic model paths. Availability, exchange coverage and delays depend on TradingView. The chart's legend identifies its symbol/exchange; unsupported symbols are not replaced with sample prices. The embed contacts TradingView and sends the selected symbol and display settings, not option inputs. Attribution is preserved. There is no automatic synchronization of chart prices into the options model and no guarantee of a real-time consolidated feed. Ad blockers or network restrictions may prevent loading; the separate full-chart link remains available.
 
 ## Model choices
 

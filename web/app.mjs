@@ -1,4 +1,6 @@
 import { sampleRows, validate } from "./model.mjs";
+import { initCandles } from "./candles.mjs";
+initCandles();
 const $ = (id) => document.getElementById(id),
   money = (n) =>
     new Intl.NumberFormat("en-US", {

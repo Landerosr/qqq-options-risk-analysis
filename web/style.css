@@ -12,6 +12,17 @@
   --muted: #626973;
   --line: #e2e5ea;
 }
+.candles { margin: 32px 0; padding: 24px; border: 1px solid var(--line); border-radius: 14px; }
+.candle-heading-row, .candle-footer { display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:center; }
+.candles h2 { margin:6px 0; font-size:26px; letter-spacing:-.035em; }
+.candle-intervals { display:flex; gap:8px; }
+.candle-intervals button { min-height:44px; padding:9px 16px; background:white; color:#15171c; border:1px solid var(--line); }
+.candle-intervals button[aria-pressed="true"] { background:#15171c; color:white; border-color:#15171c; }
+#candle-chart { width:100%; height:560px; background:#fafbfc; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+#candle-chart iframe { display:block; height:100%; width:100%; border:0; }
+.candle-footer { margin-top:12px; font-size:14px; }
+.candles .muted { font-size:14px; }
+@media(max-width:650px) { .candles { padding:14px; } #candle-chart { height:440px; } }
 .lesson { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: #f7f9fc; }
 .lesson-top, .lesson-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
 .lesson h2 { font-size: 22px; margin: 14px 0 8px; }
