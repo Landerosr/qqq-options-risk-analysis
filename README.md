@@ -1,9 +1,9 @@
-# Options Research — Call Selection & Risk Analysis
+# Options Research — Call & Put Selection and Risk Analysis
 
 [Open the options dashboard →](https://landerosr.github.io/qqq-options-risk-analysis/)
 
 An interactive extension of my QQQ research: enter a ticker, price target and
-time horizon, then compare the cost, modeled outcome and downside risk of call
+time horizon, then compare the cost, modeled outcome and downside risk of call and put
 contracts. The original fixed-scenario Python study is preserved separately.
 
 ## Using the dashboard
@@ -11,9 +11,14 @@ contracts. The original fixed-scenario Python study is preserved separately.
 1. Start with the clearly labeled synthetic QQQ example, or enter your own ticker
    and underlying price. Changing a ticker updates the TradingView candlestick chart,
    but **does not fetch prices for the options model**.
+   Changing the ticker clears the previous price, snapshot and contracts; review
+   the retained target and model assumptions before entering the new quotes.
 2. Set the target, horizon in **calendar days**, and one-contract budget.
-3. Enter bid, ask, strike, expiry and implied volatility for standard 100-share
-   calls. Use a consistent UTC snapshot.
+3. Choose Call or Put for each row, then enter bid, ask, strike, expiry and implied
+   volatility for standard 100-share contracts. Use a consistent UTC snapshot.
+   Changing a sample row’s type regenerates its synthetic bid/ask. Changing a manual
+   row’s type clears its bid, ask and IV so quotes for the other type are not reused.
+   Contract type never changes automatically with the target or strike.
 4. Run 20,000 or 100,000 Monte Carlo paths. Compare target-touch probability,
    target P&L, horizon profit probability, expiry breakeven, Delta and Theta.
 5. Select a contract for VaR, CVaR and a price/volatility stress table.
@@ -32,7 +37,7 @@ Chart prices are external market data, not synthetic model paths. Availability, 
 
 ## Model choices
 
-- Black–Scholes–Merton reprices calls at the horizon, using each contract's IV and
+- Black–Scholes–Merton reprices calls and puts at the horizon, using each contract's IV and
   an optional exit-IV change. It is a **European-exercise approximation**, not an
   American early-exercise model. Continuous dividend yield is not a discrete
   dividend schedule.
@@ -58,7 +63,16 @@ Chart prices are external market data, not synthetic model paths. Availability, 
   CSV timestamps are checked against the calendar (including leap years), so
   invalid dates cannot silently roll into another month. Numeric fields accept
   finite decimal/scientific notation; errors identify the row and field.
-  Adjusted contracts, puts, multi-leg trades and live execution are out of scope.
+  Adjusted contracts, multi-leg trades and live execution are out of scope.
+- Call expiry breakeven is strike + ask + fees/100; put expiry breakeven is
+  strike − ask − fees/100. Calls profit above that level and puts below it.
+  A put with a non-positive breakeven has zero modeled chance of expiry profit.
+  Worthless-at-expiry probability uses the strike: stock at/below strike for calls,
+  at/above strike for puts. Delta is per share; daily Theta is per 100-share contract.
+- Model rows use `type: "call"` or `type: "put"`. The CSV parser accepts an optional
+  `type` column with call/put values (case-insensitive). Legacy rows and CSVs without
+  a type default to calls. A call and put may share a strike/expiry; duplicate
+  type/strike/expiry combinations are rejected.
 
 No performance claim or recommendation follows from a favorable modeled result.
 The dashboard is a scenario-comparison tool, not a validated trading strategy.
@@ -78,8 +92,21 @@ python3 -m http.server 3000 --directory docs
 
 Dashboard tests cover pricing benchmarks, numerical Greeks, deterministic cases,
 GBM moments, continuous-barrier probabilities, Monte Carlo pricing, risk bounds,
-CSV validation and build consistency. Serve over HTTP; opening the HTML directly
+CSV validation, call/put parity, put payoff/probabilities and build consistency. Serve over HTTP; opening the HTML directly
 as a local file can prevent the module worker from loading.
+
+Optional real-browser regression checks use Playwright (a development-only dependency):
+
+```sh
+npm install --no-save --package-lock=false playwright
+npx playwright install chromium
+node test_dashboard_browser.cjs
+```
+
+Set `CHROMIUM_BIN` to use an existing Chromium executable. This suite serves the local
+built dashboard, blocks external provider requests, and exercises type selection,
+quote clearing, interrupted expiry edits, simulation cancellation and mobile layout.
+It requires browser process/socket access; the numerical suite does not.
 
 Source: `web/`. Published output: `docs/`. Original report: `docs/report.html`.
 Running the Python report generator updates `report.html`, not the dashboard.

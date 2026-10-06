@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="Compare call-option costs, target scenarios and modeled risk with Black–Scholes and Monte Carlo simulation."
+      content="Compare call and put option costs, target scenarios and modeled risk with Black–Scholes and Monte Carlo simulation."
     />
     <title>Options Research | Rodolfo Landeros</title>
     <link rel="stylesheet" href="style.css" />
@@ -21,7 +21,7 @@
     <main>
       <div class="heading">
         <div>
-          <p class="eyebrow">CALL SELECTION & RISK ANALYSIS</p>
+          <p class="eyebrow">CALL & PUT SELECTION · RISK ANALYSIS</p>
           <h1>Will it reach my target?<br />What could I lose?</h1>
         </div>
         <p class="intro">
@@ -35,7 +35,7 @@
       <section class="lesson" aria-label="Options basics" aria-roledescription="carousel">
         <div class="lesson-top"><span class="eyebrow">OPTIONS, ONE IDEA AT A TIME</span><span id="lesson-count"></span></div>
         <div id="lesson-stage" class="lesson-stage"><div class="lesson-card"><h2 id="lesson-title"></h2><p id="lesson-text"></p></div></div>
-        <div class="lesson-actions"><button type="button" id="lesson-prev" aria-label="Previous lesson">← Back</button><button type="button" id="lesson-pause">Pause</button><button type="button" id="lesson-next" aria-label="Next lesson">Next →</button><a href="https://www.optionseducation.org/strategies/all-strategies/long-call" target="_blank" rel="noreferrer">Learn more ↗</a></div>
+        <div class="lesson-actions"><button type="button" id="lesson-prev" aria-label="Previous lesson">← Back</button><button type="button" id="lesson-pause">Pause</button><button type="button" id="lesson-next" aria-label="Next lesson">Next →</button><a href="https://www.optionseducation.org/strategies/all-strategies/long-call" target="_blank" rel="noreferrer">Learn about calls ↗</a><a href="https://www.optionseducation.org/strategies/all-strategies/long-put" target="_blank" rel="noreferrer">Learn about puts ↗</a></div>
       </section>
       <form id="scenario">
         <section class="controls" aria-label="Scenario inputs">
@@ -195,21 +195,22 @@
               rel="noopener noreferrer"
               >View Yahoo chain ↗</a
             ><button id="demo" class="quiet">Reset sample</button
-            ><button id="add" class="quiet">Add call +</button>
+            ><button id="add" class="quiet">Add contract +</button>
           </div>
         </div>
         <p class="muted">
-          Edit a row to enter your own quotes. Use standard, unadjusted calls with a 100-share
+          Edit a row to enter your own quotes. Choose Call or Put for each row. Use standard, unadjusted contracts with a 100-share
           multiplier. The snapshot and expiry times are UTC. Changing the ticker updates the chart,
           but does not fetch prices for the options model.
         </p>
         <div class="table-wrap">
           <table class="inputs">
             <caption class="sr-only">
-              Editable call contract inputs
+              Editable call and put contract inputs
             </caption>
             <thead>
               <tr>
+                <th>Type</th>
                 <th>Strike ($)</th>
                 <th>Expiration (UTC)</th>
                 <th>Bid ($/share)</th>
@@ -228,14 +229,14 @@
           <h2>Your scenario</h2>
           <span id="result-label" class="muted"></span>
         </div>
-        <label>Choose your call contract <select id="beginner-contract" aria-label="Choose call for worthless probability"></select></label>
+        <label>Choose your option contract <select id="beginner-contract" aria-label="Choose contract for worthless probability"></select></label>
         <div class="metrics">
           <div>
             <p>Chance of hitting your price target</p>
             <strong id="touch">—</strong><small id="touch-explanation">Estimated chance within your chosen time</small>
           </div>
           <div>
-            <p>Chance this call expires worthless</p>
+            <p id="worthless-label">Chance this option expires worthless</p>
             <strong id="worthless">—</strong><small id="worthless-explanation"></small>
           </div>
         </div>
@@ -267,28 +268,28 @@
         </div>
         <div class="section-heading">
           <div>
-            <h2>Compare calls</h2>
+            <h2>Compare calls & puts</h2>
             <p class="muted">
               Buy at the entered ask. Sorted by strike and expiration—not a trade recommendation.
-              Select a contract for its stress test.
+              Select a contract for its stress test. Call profit at expiry requires a price above breakeven; put profit requires a price below it.
             </p>
           </div>
         </div>
         <div class="table-wrap">
           <table class="comparison">
             <caption class="sr-only">
-              Call option risk and reward comparison
+              Call and put option risk and reward comparison
             </caption>
             <thead>
               <tr>
-                <th>Call / days left</th>
+                <th>Contract / days left</th>
                 <th>Cost + fees</th>
                 <th>Target P&L</th>
                 <th>Reward / risk</th>
                 <th>Profit at horizon</th>
                 <th>Expiry breakeven</th>
-                <th>Delta</th>
-                <th>Theta / day</th>
+                <th>Model Delta</th>
+                <th>Model Theta / contract / day</th>
               </tr>
             </thead>
             <tbody id="comparison"></tbody>
@@ -332,7 +333,7 @@
           <div>
             <h3>A pricing approximation</h3>
             <p>
-              Black–Scholes–Merton prices European-style exercise. Standard US stock and ETF calls
+              Black–Scholes–Merton prices European-style exercise. Standard US stock and ETF calls and puts
               typically allow early exercise, which this model does not value. It uses a continuous
               dividend yield, fixed rates and no jumps; earnings, discrete dividends and volatility
               changes can materially change results.

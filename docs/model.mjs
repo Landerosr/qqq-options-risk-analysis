@@ -8,26 +8,33 @@ export function cdf(x) {
     (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
   return x >= 0 ? 1 - tail : tail;
 }
-export function price(s, k, t, v, r = 0, q = 0) {
-  if (t <= 0) return Math.max(s - k, 0);
-  if (v <= 0) return Math.max(s * Math.exp(-q * t) - k * Math.exp(-r * t), 0);
+function optionSign(type = "call") {
+  if (type !== "call" && type !== "put") throw Error("Option type must be call or put.");
+  return type === "put" ? -1 : 1;
+}
+export function price(s, k, t, v, r = 0, q = 0, type = "call") {
+  const sign = optionSign(type);
+  if (t <= 0) return Math.max(sign * (s - k), 0);
+  if (v <= 0) return Math.max(sign * (s * Math.exp(-q * t) - k * Math.exp(-r * t)), 0);
   const d1 = (Math.log(s / k) + (r - q + 0.5 * v * v) * t) / (v * Math.sqrt(t));
   return Math.max(
     0,
-    s * Math.exp(-q * t) * cdf(d1) - k * Math.exp(-r * t) * cdf(d1 - v * Math.sqrt(t)),
+    sign * (s * Math.exp(-q * t) * cdf(sign * d1) -
+      k * Math.exp(-r * t) * cdf(sign * (d1 - v * Math.sqrt(t)))),
   );
 }
-export function greeks(s, k, t, v, r, q) {
+export function greeks(s, k, t, v, r = 0, q = 0, type = "call") {
+  const sign = optionSign(type);
   if (t <= 0 || v <= 0) return { delta: null, theta: null };
   const d1 = (Math.log(s / k) + (r - q + 0.5 * v * v) * t) / (v * Math.sqrt(t)),
     d2 = d1 - v * Math.sqrt(t),
     pdf = Math.exp((-d1 * d1) / 2) / Math.sqrt(2 * Math.PI);
   return {
-    delta: Math.exp(-q * t) * cdf(d1),
+    delta: sign * Math.exp(-q * t) * cdf(sign * d1),
     theta:
       ((-s * Math.exp(-q * t) * pdf * v) / (2 * Math.sqrt(t)) -
-        r * k * Math.exp(-r * t) * cdf(d2) +
-        q * s * Math.exp(-q * t) * cdf(d1)) /
+        sign * r * k * Math.exp(-r * t) * cdf(sign * d2) +
+        sign * q * s * Math.exp(-q * t) * cdf(sign * d1)) /
       365,
   };
 }
@@ -66,6 +73,8 @@ export function validate(p, rows) {
   if (!rows.length || rows.length > 40) throw Error("Enter between 1 and 40 contracts.");
   const seen = new Set();
   rows.forEach((c, i) => {
+    if (c.type !== undefined && c.type !== "call" && c.type !== "put")
+      throw Error(`Contract ${i + 1}: type must be call or put.`);
     if (
       !Number.isFinite(c.strike) ||
       c.strike <= 0 ||
@@ -87,8 +96,8 @@ export function validate(p, rows) {
       throw Error(
         `Contract ${i + 1} expires before your horizon. Shorten the horizon or remove that contract.`,
       );
-    const key = `${c.strike}:${c.expiry}`;
-    if (seen.has(key)) throw Error("Remove duplicate strike/expiration pairs.");
+    const key = `${c.type ?? "call"}:${c.strike}:${c.expiry}`;
+    if (seen.has(key)) throw Error("Remove duplicate type/strike/expiration combinations.");
     seen.add(key);
   });
 }
@@ -137,26 +146,37 @@ export function analyze(p, rows) {
   const sim = simulate(p),
     h = p.horizon / 365;
   const contracts = rows.map((c, id) => {
-    const t = (c.expiry - p.asof) / YEAR,
+    const type = c.type ?? "call",
+      sign = optionSign(type),
+      t = (c.expiry - p.asof) / YEAR,
       remaining = Math.max(0, t - h),
       cost = c.ask * 100 + p.fees,
       exitIV = Math.max(0, c.iv + p.ivShift);
-    const pnl = (s) => price(s, c.strike, remaining, exitIV, p.rate, p.dividend) * 100 - cost;
+    // Cancel machine-rounding residue at breakeven, not meaningful small profits.
+    const profitTolerance = 32 * Number.EPSILON * Math.max(1, c.strike * 100, cost);
+    const netValue = (value) => {
+      const net = value * 100 - cost;
+      return Math.abs(net) <= profitTolerance ? 0 : net;
+    };
+    const pnl = (s) => netValue(price(s, c.strike, remaining, exitIV, p.rate, p.dividend, type));
     const losses = Array.from(sim.terminal, (s) => -pnl(s)).sort((a, b) => a - b),
       tail = losses.slice(Math.floor(0.95 * losses.length));
-    const threshold = c.strike + cost / 100;
-    const expiryPop =
-      p.vol > 0
-        ? 1 -
-          cdf(
-            (Math.log(threshold / p.spot) - (p.mu - 0.5 * p.vol * p.vol) * t) /
-              (p.vol * Math.sqrt(t)),
-          )
-        : +(p.spot * Math.exp(p.mu * t) > threshold);
+    const threshold = c.strike + sign * cost / 100;
+    const terminal = p.spot * Math.exp(p.mu * t);
+    const below = (level) => cdf(
+      (Math.log(level / p.spot) - (p.mu - 0.5 * p.vol * p.vol) * t) /
+        (p.vol * Math.sqrt(t)),
+    );
+    // GBM stock prices are positive, so a put with a non-positive breakeven
+    // cannot make a net profit at expiry. Avoid taking log(0) or log(negative).
+    const expiryPop = type === "put" && threshold <= 0 ? 0 : p.vol > 0
+      ? (type === "put" ? below(threshold) : 1 - below(threshold))
+      : +(netValue(Math.max(sign * (terminal - c.strike), 0)) > 0);
     const targetPnl = pnl(p.target),
-      g = greeks(p.spot, c.strike, t, c.iv, p.rate, p.dividend);
+      g = greeks(p.spot, c.strike, t, c.iv, p.rate, p.dividend, type);
     return {
       ...c,
+      type,
       id,
       days: t * 365,
       cost,
@@ -166,13 +186,13 @@ export function analyze(p, rows) {
       breakeven: threshold,
       expiryPop,
       worthlessProbability: p.vol > 0
-        ? cdf((Math.log(c.strike / p.spot) - (p.mu - 0.5 * p.vol * p.vol) * t) / (p.vol * Math.sqrt(t)))
-        : +(p.spot * Math.exp(p.mu * t) <= c.strike),
+        ? (type === "put" ? 1 - below(c.strike) : below(c.strike))
+        : +(sign * (terminal - c.strike) <= 0),
       delta: g.delta,
       theta: g.theta === null ? null : g.theta * 100,
       var95: Math.max(0, losses[Math.ceil(0.95 * losses.length) - 1]),
       cvar95: Math.max(0, tail[0] + tail.reduce((a, b) => a + (b - tail[0]), 0) / tail.length),
-      theory: price(p.spot, c.strike, t, c.iv, p.rate, p.dividend),
+      theory: price(p.spot, c.strike, t, c.iv, p.rate, p.dividend, type),
       spread: (c.ask - c.bid) / c.ask,
       stress: [...new Set([p.spot * 0.95, p.spot, p.target, p.spot * 1.05])]
         .sort((a, b) => a - b)
@@ -180,8 +200,7 @@ export function analyze(p, rows) {
           s,
           values: [-0.05, 0, 0.05].map(
             (shift) =>
-              price(s, c.strike, remaining, Math.max(0, c.iv + shift), p.rate, p.dividend) * 100 -
-              cost,
+              netValue(price(s, c.strike, remaining, Math.max(0, c.iv + shift), p.rate, p.dividend, type)),
           ),
         })),
     };
@@ -203,6 +222,7 @@ export function sampleRows(p) {
     const fair = price(p.spot, strike, days / 365, p.vol, p.rate, p.dividend),
       ask = Math.max(0.01, Math.round((fair + 0.05) * 100) / 100);
     return {
+      type: "call",
       strike,
       expiry: p.asof + days * 86400000,
       bid: Math.max(0, Math.round((fair - 0.05) * 100) / 100),
@@ -269,6 +289,9 @@ export function parseCSV(text) {
     if (r.length !== header.length) throw Error(`CSV row ${i + 2} has the wrong number of fields.`);
     const d = Object.fromEntries(header.map((k, j) => [k, r[j]]));
     if (required.some((k) => !d[k])) throw Error(`CSV row ${i + 2} has a missing value.`);
+    const type = d.type === undefined ? "call" : d.type.toLowerCase();
+    if (type !== "call" && type !== "put")
+      throw Error(`CSV row ${i + 2}: type must be call or put.`);
     const quoteTime = csvTime(d.quote_time, "quote_time", i + 2);
     const expiry = csvTime(d.expiry, "expiry", i + 2);
     const numbers = Object.fromEntries(["spot", "strike", "bid", "ask", "iv_pct"].map(
@@ -285,6 +308,7 @@ export function parseCSV(text) {
     )
       throw Error("All rows must use the same ticker, spot and quote_time.");
     return {
+      type,
       strike: numbers.strike,
       expiry,
       bid: numbers.bid,

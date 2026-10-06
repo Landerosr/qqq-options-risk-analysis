@@ -1,4 +1,4 @@
-import { sampleRows, validate } from "./model.mjs";
+import { sampleRows, validate, price, YEAR } from "./model.mjs";
 import { initCandles } from "./candles.mjs";
 initCandles();
 const $ = (id) => document.getElementById(id),
@@ -9,7 +9,7 @@ const $ = (id) => document.getElementById(id),
       maximumFractionDigits: 2,
     }).format(n),
   pct = (n) => (100 * n).toFixed(1) + "%",
-  dt = (n) => new Date(n).toISOString().slice(0, 19);
+  dt = (n) => Number.isFinite(new Date(n).getTime()) ? new Date(n).toISOString().slice(0, 19) : "";
 let mode = "sample",
   rows = [],
   result = null,
@@ -67,6 +67,35 @@ function renderRows() {
   body.replaceChildren();
   rows.forEach((c, i) => {
     const tr = document.createElement("tr");
+    const typeCell = document.createElement("td"),
+      typeInput = document.createElement("select");
+    typeInput.setAttribute("aria-label", `Contract ${i + 1} type`);
+    for (const type of ["call", "put"]) {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = type === "call" ? "Call" : "Put";
+      typeInput.append(option);
+    }
+    typeInput.value = c.type ?? "call";
+    typeInput.addEventListener("change", () => {
+      c.type = typeInput.value;
+      if (mode === "sample") {
+        const p = inputs(),
+          fair = price(p.spot, c.strike, (c.expiry - p.asof) / YEAR, c.iv, p.rate, p.dividend, c.type);
+        c.bid = Math.max(0, Math.round((fair - 0.05) * 100) / 100);
+        c.ask = Math.max(0.01, Math.round((fair + 0.05) * 100) / 100);
+      } else {
+        // A call quote is not a put quote (or vice versa), even at the same strike.
+        c.bid = c.ask = c.iv = NaN;
+      }
+      renderRows();
+      dirty();
+      $("message").textContent = mode === "sample"
+        ? "Sample price regenerated for the selected option type. No market data was fetched."
+        : "Contract type changed. Enter the matching bid, ask and IV before running analysis.";
+    });
+    typeCell.append(typeInput);
+    tr.append(typeCell);
     for (const [key, type, min, max, step] of [
       ["strike", "number", 0.01, 100000, "any"],
       ["expiry", "datetime-local", null, null, "1"],
@@ -77,7 +106,7 @@ function renderRows() {
       const td = document.createElement("td"),
         input = document.createElement("input");
       input.type = type;
-      input.value = key === "expiry" ? dt(c[key]) : key === "iv" ? c[key] * 100 : c[key];
+      input.value = key === "expiry" ? dt(c[key]) : !Number.isFinite(c[key]) ? "" : key === "iv" ? c[key] * 100 : c[key];
       input.setAttribute("aria-label", `Contract ${i + 1} ${key}${key === "expiry" ? " UTC" : ""}`);
       if (min !== null) input.min = min;
       if (max !== null) input.max = max;
@@ -131,13 +160,14 @@ function select(id) {
   if (!result) return;
   const c = result.contracts.find((x) => x.id === id);
   $("beginner-contract").value = String(id);
+  $("worthless-label").textContent = `Chance this ${c.type} expires worthless`;
   $("worthless").textContent = pct(c.worthlessProbability);
-  $("worthless-explanation").textContent = `Selected $${c.strike} call · stock at or below $${c.strike} on ${dt(c.expiry).slice(0, 10)} (UTC). You lose the premium and fees if held to expiration with no payoff.`;
+  $("worthless-explanation").textContent = `Selected $${c.strike} ${c.type} · stock at or ${c.type === "put" ? "above" : "below"} $${c.strike} on ${dt(c.expiry).slice(0, 10)} (UTC). You lose the premium and fees if held to expiration with no payoff.`;
   document
     .querySelectorAll(".comparison tr")
     .forEach((tr) => tr.classList.toggle("selected", Number(tr.dataset.id) === id));
   $("selected-title").textContent =
-    `${result.p.symbol} $${c.strike} call · ${c.days.toFixed(2)} calendar days`;
+    `${result.p.symbol} $${c.strike} ${c.type} · ${c.days.toFixed(2)} calendar days`;
   const risk = $("risk");
   risk.replaceChildren();
   for (const [label, value] of [
@@ -145,6 +175,7 @@ function select(id) {
     ["95% VaR · horizon", money(c.var95)],
     ["95% CVaR · horizon", money(c.cvar95)],
     ["Profit at expiration", pct(c.expiryPop)],
+    ["Expiry profit requires", c.type === "put" && c.breakeven <= 0 ? "No positive stock price" : `${c.type === "put" ? "Below" : "Above"} ${money(c.breakeven)}`],
     ["BSM entry value / share", money(c.theory)],
     ["Entered ask / share", money(c.ask)],
     ["Spread / ask", pct(c.spread)],
@@ -210,7 +241,7 @@ function render(r) {
   result = r;
   $("results").hidden = false;
   $("beginner-contract").replaceChildren(...r.contracts.map(c => {
-    const option = node("option", `$${c.strike} call · expires ${dt(c.expiry).slice(0, 10)}`);
+    const option = node("option", `$${c.strike} ${c.type} · expires ${dt(c.expiry).slice(0, 10)}`);
     option.value = c.id;
     return option;
   }));
@@ -227,12 +258,12 @@ function render(r) {
   const body = $("comparison");
   body.replaceChildren();
   r.contracts
-    .sort((a, b) => a.strike - b.strike || a.expiry - b.expiry)
+    .sort((a, b) => a.strike - b.strike || a.expiry - b.expiry || a.type.localeCompare(b.type))
     .forEach((c) => {
       const tr = node("tr", "");
       tr.dataset.id = c.id;
       const td = node("td", ""),
-        b = node("button", `$${c.strike} call`);
+        b = node("button", `$${c.strike} ${c.type}`);
       b.onclick = () => select(c.id);
       b.append(node("small", `${c.days.toFixed(2)}d · ${dt(c.expiry).slice(0, 10)}`));
       td.append(b);
@@ -245,7 +276,7 @@ function render(r) {
         node("td", money(c.targetPnl), c.targetPnl >= 0 ? "positive" : "negative"),
         node("td", c.ratio.toFixed(2) + "×"),
         node("td", pct(c.pop)),
-        node("td", money(c.breakeven)),
+        node("td", c.type === "put" && c.breakeven < 0 ? "Not attainable" : money(c.breakeven)),
         node("td", c.delta === null ? "—" : c.delta.toFixed(3)),
         node("td", c.theta === null ? "—" : money(c.theta)),
       );
@@ -299,12 +330,14 @@ function run(event) {
 $("scenario").addEventListener("submit", run);
 $("scenario").addEventListener("input", (event) => {
   const id = event.target.id;
-  if (id === "symbol" && mode !== "sample") {
+  if (id === "symbol") {
     rows = [];
+    $("spot").value = "";
+    $("asof").value = "";
     renderRows();
     mode = "manual";
     dirty();
-    $("message").textContent = "Ticker changed. Enter quotes for the new ticker.";
+    $("message").textContent = "Ticker changed. Enter the new underlying price, UTC snapshot and contract quotes. Your target and model assumptions were retained; review them for this ticker.";
     return;
   }
   if (["spot", "asof"].includes(id) && mode !== "sample") mode = "manual";
@@ -319,6 +352,7 @@ $("add").onclick = () => {
   const p = inputs();
   if (!Number.isFinite(p.asof) || !Number.isFinite(p.spot)) return;
   rows.push({
+    type: "call",
     strike: p.spot,
     expiry: p.asof + Math.max(p.horizon, 5) * 86400000,
     bid: 0,
@@ -336,11 +370,11 @@ reset();
 run();
 
 const lessons = [
-  ["What is a call?", "A call gives its holder the right to buy shares at a set strike price. Buying the contract costs a premium."],
-  ["When is it worthless?", "At expiration, a call has no payoff if the stock is at or below its strike. Held to that point, the premium and fees are lost."],
+  ["Call or put?", "A call gives its holder the right to buy shares at the strike price; a put gives the right to sell. Choose the contract type explicitly. Buying either costs a premium."],
+  ["When is it worthless?", "At expiration, a call has no payoff at or below its strike; a put has no payoff at or above its strike. Held to that point, the premium and fees are lost."],
   ["Target hit ≠ profit", "Touching your price target is different from making money. The option price also depends on time remaining and volatility."],
   ["Time decay", "Time passing generally reduces a bought option’s time value, with other factors unchanged. A correct direction can still produce a loss."],
-  ["Break-even at expiration", "A call needs to finish above its strike plus the premium and fees per share to make a net profit at expiration."],
+  ["Break-even at expiration", "For net profit at expiration, a call needs the stock above strike plus premium and fees per share. A put needs it below strike minus premium and fees per share."],
   ["Probabilities are estimates", "These numbers use your volatility and growth assumptions. They describe a model, not a prediction or a guaranteed trading outcome."],
 ];
 let lessonIndex = 0;
