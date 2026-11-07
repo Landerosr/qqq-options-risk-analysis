@@ -1,6 +1,45 @@
-# Options Research — Call & Put Selection and Risk Analysis
+# Quantitative Options Research: Stochastic Simulation and Risk
 
-[Open the options dashboard →](https://landerosr.github.io/qqq-options-risk-analysis/)
+[Open the options dashboard](https://landerosr.github.io/qqq-options-risk-analysis/) · [Python study](qqq_options_analysis.py) · [JavaScript model](web/model.mjs)
+
+A reproducible study of decisions under price uncertainty. The project combines
+Black–Scholes–Merton valuation, geometric Brownian motion, Monte Carlo simulation,
+and loss-distribution analysis to compare standard call and put contracts.
+
+**Research question:** How do strike, expiration, volatility, premium and time
+horizon change a contract's modeled payoff distribution and downside risk?
+
+## Quantitative methods and theory
+
+| Method | Role in the project | Implementation |
+|---|---|---|
+| Black–Scholes–Merton and put–call parity | European-option pricing benchmark, with explicit interest-rate and dividend-yield inputs | [Pricing and Greeks](web/model.mjs), [Python pricing study](qqq_options_analysis.py) |
+| Geometric Brownian motion | Positive lognormal price paths with separately specified drift and volatility | [Seeded path simulation](web/model.mjs) |
+| Monte Carlo estimation | Target-touch and target-finish probabilities, horizon profit probability and loss distributions | [Simulation and analysis](web/model.mjs) |
+| Brownian-bridge crossing probabilities | Account for target crossings between simulated time steps in the dashboard | [Dashboard simulation](web/model.mjs) |
+| Sensitivity analysis | Delta, Theta, and joint price/volatility stress scenarios | [Model and stress calculations](web/model.mjs) |
+| Tail-risk measures | 95% Value at Risk, Conditional Value at Risk and premium-bounded maximum loss | [Contract analysis](web/model.mjs) |
+
+The dashboard separates the assumed real-world price drift used for scenarios
+from the risk-free rate used for option valuation. A target price is an input to
+a scenario, not a return forecast. All contracts are compared on common simulated
+underlying paths.
+
+## Evidence and validation
+
+- [Numerical and regression tests](test_dashboard.mjs) check pricing benchmarks,
+  finite-difference Greeks, put–call parity, GBM moments, continuous-barrier
+  probabilities, Monte Carlo pricing, risk bounds and input handling.
+- [Python tests](test_qqq_options.py) check the original fixed-scenario study.
+- The original study and dashboard use different time conventions and inputs:
+  the Python case uses 252 trading days per year; the dashboard uses 365 calendar
+  days. Their outputs should not be treated as interchangeable.
+
+The model is an educational scenario-comparison tool. Synthetic or manually
+entered inputs are not historical strategy evidence. There is no demonstrated
+trading edge, calibrated return forecast, or out-of-sample profitability claim.
+
+## Dashboard overview
 
 An interactive extension of my QQQ research: enter a ticker, price target and
 time horizon, then compare the cost, modeled outcome and downside risk of call and put
