@@ -1,6 +1,8 @@
 # Quantitative Options Research: Stochastic Simulation and Risk
 
-[Open the options dashboard](https://landerosr.github.io/qqq-options-risk-analysis/) · [Python study](qqq_options_analysis.py) · [JavaScript model](web/model.mjs)
+This repository is the primary project portfolio. The research code, results and documentation are available here without needing a separate website; interface source is preserved for optional local use.
+
+[Python study](qqq_options_analysis.py) · [JavaScript model](web/model.mjs)
 
 A reproducible study of decisions under price uncertainty. The project combines
 Black–Scholes–Merton valuation, geometric Brownian motion, Monte Carlo simulation,
@@ -147,7 +149,7 @@ built dashboard, blocks external provider requests, and exercises type selection
 quote clearing, interrupted expiry edits, simulation cancellation and mobile layout.
 It requires browser process/socket access; the numerical suite does not.
 
-Source: `web/`. Published output: `docs/`. Original report: `docs/report.html`.
+Source: `web/`. Local build output: `docs/`. Original report: `docs/report.html`.
 Running the Python report generator updates `report.html`, not the dashboard.
 
 References: [Options Industry Council: Black–Scholes](https://www.optionseducation.org/advancedconcepts/black-scholes-formula)
@@ -201,13 +203,13 @@ strategy is profitable.
 
 ## Visual report
 
-[View the original project report](https://landerosr.github.io/qqq-options-risk-analysis/report.html)
+[Browse the original report source](docs/report.html)
 
 ## Project files
 
 - `qqq_options_analysis.py`: pricing, simulation, risk, and report generation
 - `BLACK_SCHOLES_ASSUMPTIONS.md`: assumptions and model limitations
-- `docs/report.html`: GitHub Pages version of the original visual report
+- `docs/report.html`: preserved local HTML version of the original visual report
 - `results/*.csv`: summary model outputs
 - `test_qqq_options.py`: five automated validation checks
 
