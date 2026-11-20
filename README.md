@@ -1,142 +1,46 @@
-# Quantitative Options Research: Stochastic Simulation and Risk
+# QQQ option selection under price uncertainty
 
-This repository is the primary project portfolio. The research code, results and documentation are available here without needing a separate website; interface source is preserved for optional local use.
+**Research question:** For a short-term move from $706 to $709 in QQQ, how do strike and maturity change a call's break-even, gain in the target scenario, and downside exposure?
 
-[Python study](qqq_options_analysis.py) · [JavaScript model](web/model.mjs)
+The comparison uses six illustrative contracts, not historical option quotes or executed trades. The [Python study](qqq_options_analysis.py) generates the results below. A [separate scenario model](web/model.mjs) extends the analysis to manually entered calls and puts.
 
-A reproducible study of decisions under price uncertainty. The project combines
-Black–Scholes–Merton valuation, geometric Brownian motion, Monte Carlo simulation,
-and loss-distribution analysis to compare standard call and put contracts.
+## Findings
 
-**Research question:** How do strike, expiration, volatility, premium and time
-horizon change a contract's modeled payoff distribution and downside risk?
+- **Touching the target is not the same as closing above it.** In the one-trading-day simulation, 74.2% of sampled paths reached $709, but only 40.0% finished at or above it. Neither statistic is the probability of earning a profit on a specific contract. [Target probabilities](results/target_probabilities.csv)
+- **Time remaining changes the option value at the same underlying price.** If QQQ is exactly $709 at expiry, a $709-strike call has no intrinsic value. A five-day $709-strike call repriced after one day still has four days left. At $709, its modeled gain is about $37, against an initial theoretical cost of $876 and one-day 95% VaR of about $666. That is a favorable price scenario, not a favorable risk-adjusted trade recommendation. [Contract comparison](results/strategy_comparison.csv) · [Loss metrics](results/risk_summary.csv)
+- **The pricing cross-check measures numerical agreement, not predictive validity.** Across the six calls, simulated prices were within $0.024 per share of Black–Scholes–Merton values under the same assumptions. [Monte Carlo validation](results/monte_carlo_validation.csv)
 
-## Quantitative methods and theory
+## Study design
 
-| Method | Role in the project | Implementation |
-|---|---|---|
-| Black–Scholes–Merton and put–call parity | European-option pricing benchmark, with explicit interest-rate and dividend-yield inputs | [Pricing and Greeks](web/model.mjs), [Python pricing study](qqq_options_analysis.py) |
-| Geometric Brownian motion | Positive lognormal price paths with separately specified drift and volatility | [Seeded path simulation](web/model.mjs) |
-| Monte Carlo estimation | Target-touch and target-finish probabilities, horizon profit probability and loss distributions | [Simulation and analysis](web/model.mjs) |
-| Brownian-bridge crossing probabilities | Account for target crossings between simulated time steps in the dashboard | [Dashboard simulation](web/model.mjs) |
-| Sensitivity analysis | Delta, Theta, and joint price/volatility stress scenarios | [Model and stress calculations](web/model.mjs) |
-| Tail-risk measures | 95% Value at Risk, Conditional Value at Risk and premium-bounded maximum loss | [Contract analysis](web/model.mjs) |
+The fixed case holds spot at $706 and annual volatility at 25%, with an assumed 8% price drift, a 4% risk-free rate and no dividend yield. Strike ranges from $706 to $712 and maturity from one to ten trading days. Geometric Brownian motion generates 100,000 seeded paths on a 252-trading-day clock with 78 simulation steps per trading day. These price scenarios use the assumed drift; the separate pricing cross-check discounts risk-neutral payoffs. The study compares break-even and Greeks, uses the one-day repriced P&L distribution for probability of loss, 95% VaR and CVaR, and varies spot and volatility in a [stress grid](results/stress_tests.csv).
 
-The dashboard separates the assumed real-world price drift used for scenarios
-from the risk-free rate used for option valuation. A target price is an input to
-a scenario, not a return forecast. All contracts are compared on common simulated
-underlying paths.
+The [assumption notes](BLACK_SCHOLES_ASSUMPTIONS.md) explain the European pricing approximation and its limitations for listed American-style QQQ options. The input volatility and drift are not fitted; constant-volatility lognormal paths do not capture jumps or volatility regimes. A target may also be missed between observations in the fixed-step Python study. Model prices omit real execution frictions, and no historical backtest or live P&L is presented.
 
-## Evidence and validation
+## Reproduce the fixed case
 
-- [Numerical and regression tests](test_dashboard.mjs) check pricing benchmarks,
-  finite-difference Greeks, put–call parity, GBM moments, continuous-barrier
-  probabilities, Monte Carlo pricing, risk bounds and input handling.
-- [Python tests](test_qqq_options.py) check the original fixed-scenario study.
-- The original study and dashboard use different time conventions and inputs:
-  the Python case uses 252 trading days per year; the dashboard uses 365 calendar
-  days. Their outputs should not be treated as interchangeable.
+```sh
+python3 -m pip install -r requirements.txt
+python3 qqq_options_analysis.py
+python3 -m unittest -v test_qqq_options.py
+```
 
-The model is an educational scenario-comparison tool. Synthetic or manually
-entered inputs are not historical strategy evidence. There is no demonstrated
-trading edge, calibrated return forecast, or out-of-sample profitability claim.
+The script writes the CSVs and regenerates the [original report source](docs/report.html). [Python tests](test_qqq_options.py) check the fixed case. See the [Options Industry Council pricing reference](https://www.optionseducation.org/advancedconcepts/black-scholes-formula).
 
-## Dashboard overview
+## Optional local scenario tool
 
-An interactive extension of my QQQ research: enter a ticker, price target and
-time horizon, then compare the cost, modeled outcome and downside risk of call and put
-contracts. The original fixed-scenario Python study is preserved separately.
+The interactive model uses a 365-calendar-day clock and a default price drift of 0%, so its outputs are not interchangeable with the fixed case above. It compares calls and puts on common price paths. An independent Brownian-bridge stream estimates between-step target crossings in the scenario tool; a reported sampling margin does not capture uncertainty about the model assumptions. The calculation assumes entry at the entered ask and a theoretical exit value less user-entered fees. It does not model exit at first touch, bid–ask cost at exit, slippage, financing or exercise and assignment effects.
 
-## Using the dashboard
+Start with the labeled synthetic QQQ sample or enter a consistent UTC option snapshot: ticker, underlying price, bid, ask, strike, expiry and implied volatility. Choose a target, calendar-day horizon and budget, then simulate 20,000 or 100,000 paths. Compare touch and finish probabilities, horizon P&L, expiration break-even, Greeks and tail risk. Contract type is explicit; changing ticker clears the old price, snapshot and contracts, and changing a manually entered contract's type clears its quotes and IV. The CSV importer accepts an optional `type` column and defaults legacy rows to calls.
 
-1. Start with the clearly labeled synthetic QQQ example, or enter your own ticker
-   and underlying price. Changing a ticker updates the TradingView candlestick chart,
-   but **does not fetch prices for the options model**.
-   Changing the ticker clears the previous price, snapshot and contracts; review
-   the retained target and model assumptions before entering the new quotes.
-2. Set the target, horizon in **calendar days**, and one-contract budget.
-3. Choose Call or Put for each row, then enter bid, ask, strike, expiry and implied
-   volatility for standard 100-share contracts. Use a consistent UTC snapshot.
-   Changing a sample row’s type regenerates its synthetic bid/ask. Changing a manual
-   row’s type clears its bid, ask and IV so quotes for the other type are not reused.
-   Contract type never changes automatically with the target or strike.
-4. Run 20,000 or 100,000 Monte Carlo paths. Compare target-touch probability,
-   target P&L, horizon profit probability, expiry breakeven, Delta and Theta.
-5. Select a contract for VaR, CVaR and a price/volatility stress table.
-
-**Data boundary:** there is no automatic Yahoo feed or broker connection. The
-Yahoo link opens the selected ticker's chain as a reference. Enter quotes
-you are permitted to use. Options inputs stay in the browser, with no account or
-upload server. Entered data is not independently verified and is not retained
-when the page reloads. Snapshot age and wide spreads are flagged for review.
-
-## Underlying candlestick chart
-
-The selected ticker drives a [TradingView Advanced Chart widget](https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/), with candlestick-only styling and 30-minute, 1-hour and 4-hour interval buttons. Apple uses ticker AAPL. The chart uses Central time; model snapshots remain UTC. It is full-width, supports the provider's chart navigation, and includes a link to open the full chart.
-
-Chart prices are external market data, not synthetic model paths. Availability, exchange coverage and delays depend on TradingView. The chart's legend identifies its symbol/exchange; unsupported symbols are not replaced with sample prices. The embed contacts TradingView and sends the selected symbol and display settings, not option inputs. Attribution is preserved. There is no automatic synchronization of chart prices into the options model and no guarantee of a real-time consolidated feed. Ad blockers or network restrictions may prevent loading; the separate full-chart link remains available.
-
-## Model choices
-
-- Black–Scholes–Merton reprices calls and puts at the horizon, using each contract's IV and
-  an optional exit-IV change. It is a **European-exercise approximation**, not an
-  American early-exercise model. Continuous dividend yield is not a discrete
-  dividend schedule.
-- A common geometric Brownian motion drives all contracts, using the user's
-  underlying volatility and expected **price return**. Expected return defaults
-  to 0%; the target does not calibrate or imply a return forecast. The risk-free
-  rate is used for pricing, not presented as a real-world return forecast.
-- 365-day year fractions include overnight and weekend time. Snapshot and expiry
-  are explicit UTC timestamps; the tool does not infer exchange calendars or
-  expiration times. This differs from the original study's 252-trading-day clock.
-- Stock paths use seed 42. An independent Brownian-bridge stream (seed 314159)
-  models between-step target crossings. The displayed paths are 16 samples,
-  not confidence bands. The target-touch sampling margin excludes model error.
-- P&L assumes buying at the entered ask and selling at a theoretical horizon
-  value, minus entered total fees. There is no stop-loss or exit-at-first-touch
-  rule. Exit spreads, slippage, financing and exercise/assignment cash needs are
-  not modeled. Expiry probability uses the lognormal terminal distribution.
-- Reward/risk = target-scenario net profit / (100 × ask + entered fees).
-  VaR is the nearest-rank 95th percentile of loss; CVaR averages the worst 5%.
-  Both are floored at zero. Neither replaces the maximum-loss calculation.
-- The tool rejects contracts expiring before the horizon, crossed quotes,
-  inconsistent CSV snapshots, duplicate contracts and unsupported values.
-  CSV timestamps are checked against the calendar (including leap years), so
-  invalid dates cannot silently roll into another month. Numeric fields accept
-  finite decimal/scientific notation; errors identify the row and field.
-  Adjusted contracts, multi-leg trades and live execution are out of scope.
-- Call expiry breakeven is strike + ask + fees/100; put expiry breakeven is
-  strike − ask − fees/100. Calls profit above that level and puts below it.
-  A put with a non-positive breakeven has zero modeled chance of expiry profit.
-  Worthless-at-expiry probability uses the strike: stock at/below strike for calls,
-  at/above strike for puts. Delta is per share; daily Theta is per 100-share contract.
-- Model rows use `type: "call"` or `type: "put"`. The CSV parser accepts an optional
-  `type` column with call/put values (case-insensitive). Legacy rows and CSVs without
-  a type default to calls. A call and put may share a strike/expiry; duplicate
-  type/strike/expiry combinations are rejected.
-
-No performance claim or recommendation follows from a favorable modeled result.
-The dashboard is a scenario-comparison tool, not a validated trading strategy.
-
-## Build and checks
-
-The dashboard is dependency-free HTML, CSS and JavaScript. Simulation runs in a
-Web Worker so editing remains responsive. Python/NumPy power the retained study.
+There is no automatic option quote feed or brokerage connection. The [TradingView chart widget](https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/) is an external visual reference in Central time and does not populate the model; it receives the symbol and display settings, not the option inputs. The Yahoo chain is a reference link only ([data disclosures](https://help.yahoo.com/kb/finance/article-exchanges-data-delays-sln2310.html)). Manual inputs are in-browser, not independently verified, and not persisted on reload.
 
 ```sh
 node build-dashboard.mjs
 node --test test_dashboard.mjs
-python3 -m pip install -r requirements.txt
-python3 -m unittest -v test_qqq_options.py
 python3 -m http.server 3000 --directory docs
 ```
 
-Dashboard tests cover pricing benchmarks, numerical Greeks, deterministic cases,
-GBM moments, continuous-barrier probabilities, Monte Carlo pricing, risk bounds,
-CSV validation, call/put parity, put payoff/probabilities and build consistency. Serve over HTTP; opening the HTML directly
-as a local file can prevent the module worker from loading.
-
-Optional real-browser regression checks use Playwright (a development-only dependency):
+The [JS tests](test_dashboard.mjs) cover pricing and Greeks, put–call parity, GBM moments, barrier crossing, risk bounds, input validation and build consistency. The local build is served over HTTP so the module worker loads. A separate [browser regression suite](test_dashboard_browser.cjs) exercises the UI with external provider requests blocked:
 
 ```sh
 npm install --no-save --package-lock=false playwright
@@ -144,91 +48,6 @@ npx playwright install chromium
 node test_dashboard_browser.cjs
 ```
 
-Set `CHROMIUM_BIN` to use an existing Chromium executable. This suite serves the local
-built dashboard, blocks external provider requests, and exercises type selection,
-quote clearing, interrupted expiry edits, simulation cancellation and mobile layout.
-It requires browser process/socket access; the numerical suite does not.
+Set `CHROMIUM_BIN` to use an existing Chromium executable. The numerical tests do not need browser process or socket access.
 
-Source: `web/`. Local build output: `docs/`. Original report: `docs/report.html`.
-Running the Python report generator updates `report.html`, not the dashboard.
-
-References: [Options Industry Council: Black–Scholes](https://www.optionseducation.org/advancedconcepts/black-scholes-formula)
-and [Yahoo Finance data disclosures](https://help.yahoo.com/kb/finance/article-exchanges-data-delays-sln2310.html).
-
----
-
-## Original QQQ study
-
-This Python project evaluates a practical options question:
-
-> When expecting a small short-term increase in QQQ, which call strike and
-> expiration offer the best balance between premium cost, probability of
-> profit, time decay, and downside risk?
-
-The starting case reflects independent trading research involving QQQ near
-**$706** with a **$709 target**. Because exact historical option-chain quotes
-were not used, the project compares six illustrative standard call candidates.
-These are model inputs, not records of an executed trade.
-
-## What the project demonstrates
-
-1. Black-Scholes pricing and Greeks for standard QQQ calls
-2. Comparison of at-the-money and out-of-the-money strikes
-3. Comparison of 1-, 5-, and 10-trading-day expirations
-4. Monte Carlo estimates of target-touch and target-finish probabilities
-5. Monte Carlo pricing validation against Black-Scholes
-6. One-day VaR, CVaR, maximum loss, and probability of profit
-7. Price-and-volatility stress testing
-
-## Main analytical insight
-
-Reaching a price target does not automatically make a call profitable. At
-expiration, QQQ must finish above the strike plus the premium paid. Lower-cost
-out-of-the-money calls reduce dollars at risk, but can also have lower Delta,
-lower probability of profit, and faster percentage losses.
-
-## Illustrative findings
-
-- The simulated probability of touching $709 within one trading day was 74.2%,
-  while the probability of finishing the day at or above $709 was 40.0%.
-- A one-day $709-strike call would expire worthless if QQQ finished exactly at
-  $709 because the option would have no intrinsic value.
-- For the five-day $709-strike comparison candidate, reaching $709 after one
-  day produced an estimated $37 gain because four days of time value remained.
-- The same five-day candidate had an estimated one-day 95% VaR of approximately
-  $666 on an $876 theoretical contract cost.
-
-These results depend on the assumptions and are not evidence that a trading
-strategy is profitable.
-
-## Visual report
-
-[Browse the original report source](docs/report.html)
-
-## Project files
-
-- `qqq_options_analysis.py`: pricing, simulation, risk, and report generation
-- `BLACK_SCHOLES_ASSUMPTIONS.md`: assumptions and model limitations
-- `docs/report.html`: preserved local HTML version of the original visual report
-- `results/*.csv`: summary model outputs
-- `test_qqq_options.py`: five automated validation checks
-
-## Run the analysis
-
-```bash
-python3 -m pip install -r requirements.txt
-python3 qqq_options_analysis.py
-python3 -m unittest -v test_qqq_options.py
-```
-
-## Limitations
-
-- Inputs use assumed volatility, interest rate, return, and dividend yield.
-- Black-Scholes is a benchmark; listed QQQ options are American-style and QQQ
-  makes distributions.
-- Simulated lognormal returns do not fully capture jumps, volatility changes,
-  liquidity, spreads, or execution costs.
-- A historical options backtest would be required before making any statement
-  about realized strategy performance.
-
-Educational analysis only. This project is not investment advice.
+Educational analysis only, not investment advice.
