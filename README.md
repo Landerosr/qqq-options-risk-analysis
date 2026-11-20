@@ -16,6 +16,28 @@ The fixed case holds spot at $706 and annual volatility at 25%, with an assumed 
 
 The [assumption notes](BLACK_SCHOLES_ASSUMPTIONS.md) explain the European pricing approximation and its limitations for listed American-style QQQ options. The input volatility and drift are not fitted; constant-volatility lognormal paths do not capture jumps or volatility regimes. A target may also be missed between observations in the fixed-step Python study. Model prices omit real execution frictions, and no historical backtest or live P&L is presented.
 
+## Model validation: how much does the monitoring grid miss?
+
+The [Python validation study](validate_target_touch.py) compares discrete-grid touch estimates and a conditional Brownian-bridge correction with closed-form first-passage and terminal probabilities for the same GBM scenario. For the existing $706 → $709 case, with 8% assumed annual price drift and 25% annual volatility:
+
+| One-day touch method | Estimated probability |
+| :--- | ---: |
+| 13 checkpoints, no crossing correction | 67.01% |
+| 78 checkpoints, no crossing correction | 74.28% |
+| 78 checkpoints, with crossing correction | 79.20% |
+| Continuous monitoring, closed-form benchmark | 79.03% |
+
+The 78-step correction added **4.92 percentage points** (paired Monte Carlo SE: 0.06 percentage points). The exact probability of finishing at or above $709 was **39.86%**. Across the 15%, 25%, and 40% volatility scenarios, exact touch probabilities were 66.21%, 79.03%, and 86.64%. The [nine sensitivity runs](results/target_touch_validation.csv) use 100,000 paths per run, including a one-checkpoint case where “touch” without the correction is just the terminal event. These are new random streams; the original fixed-case results above are unchanged.
+
+**Method.** The log-price process is Brownian motion with log drift equal to the assumed price drift minus half the variance rate. The continuous benchmark uses the reflection principle with drift. Given two log prices below the barrier, the bridge uses a conditional crossing probability of `exp(-2 × gap_at_start × gap_at_end / step_variance)`; conditional no-crossing probabilities multiply across intervals. The corrected estimate averages those conditional path probabilities instead of drawing a second hit indicator. The grid and bridge share the same path draws within each row, so the reported gap SE comes from their path-by-path differences. SEs measure simulation noise, not model or parameter uncertainty.
+
+This tests a numerical implementation under specified assumptions, not whether GBM forecasts real QQQ moves. Continuous modeled touches do not imply fills or option profits. No quotes, realized paths, or calibrated volatility inputs are used.
+
+```sh
+python3 validate_target_touch.py
+python3 -m unittest -v test_validate_target_touch.py
+```
+
 ## Reproduce the fixed case
 
 ```sh
